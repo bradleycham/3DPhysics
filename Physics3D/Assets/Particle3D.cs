@@ -118,8 +118,14 @@ public class Particle3D : MonoBehaviour
     }
 
     
-    void applyForceAtLocation(Vector2 pointOfForce, Vector2 newForce)
+    void applyForceAtLocation(Vector3 pointOfForce, Vector3 newForce)
     {
+        // box inertia tensor
+        inertiaTensor = new Matrix4x4(new Vector4((1 / 12) * mass * (1 * 1 + 1 * 1), 0f, 0f, 0f),
+                                      new Vector4(0f, (1 / 12) * mass * (1 * 1 + 1 * 1), 0f, 0f),
+                                      new Vector4(0f, 0f, (1 / 12) * mass * (1 * 1 + 1 * 1), 0f),
+                                      new Vector4(0f, 0f, 0f, 1f));
+        inverseInertiaTensor = inertiaTensor.inverse;
 
 
         /*
