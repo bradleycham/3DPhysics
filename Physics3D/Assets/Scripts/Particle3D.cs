@@ -4,8 +4,6 @@ using UnityEngine;
 
 public class Particle3D : MonoBehaviour
 {
-    public float speed;
-
     public Vector3 position;
     public Vector3 velocity;
     public Vector3 acceleration;
@@ -13,7 +11,6 @@ public class Particle3D : MonoBehaviour
     public Quaternion Rotation; 
     //public Vector3 norm;
 
-    //public float angle;
     public Vector3 torque;
     public Vector3 angularVelocity;
     public Vector3 angularAcceleration;
@@ -29,6 +26,7 @@ public class Particle3D : MonoBehaviour
     public Vector3 newForce = new Vector3(0.0f,0.0f,0.0f);
     public Vector3 pointOfForce = new Vector3(0.0f, 0.0f, 0.0f);
 
+    InertiaTensor3D tensorComponent;
     //public bool applyDrag;
     //public bool applyGravity;
     //public bool kineticFriction;
@@ -109,6 +107,7 @@ public class Particle3D : MonoBehaviour
                                               0.0f);
         Quaternion rotation = newVel * Rotation;
 
+        
         Rotation.x += rotation.x;
         Rotation.y += rotation.y;
         Rotation.z += rotation.z;
@@ -120,41 +119,28 @@ public class Particle3D : MonoBehaviour
     
     void ApplyForceAtLocation(Vector3 pointOfForce, Vector3 newForce)
     {
-        // box inertia tensor
-        Matrix4x4 newMat = new Matrix4x4(new Vector4((1 / 12) * mass * (1 * 1 + 1 * 1), 0f, 0f, 0f),
-                                      new Vector4(0f, (1 / 12) * mass * (1 * 1 + 1 * 1), 0f, 0f),
-                                      new Vector4(0f, 0f, (1 / 12) * mass * (1 * 1 + 1 * 1), 0f),
-                                      new Vector4(0f, 0f, 0f, 1f));
-        inertiaTensor = newMat;
-        inverseInertiaTensor = inertiaTensor.transpose;
-
         torque = Vector3.Cross(pointOfForce, newForce);
 
-        Vector4 newVec = (localToWorldTransform * torque);
-        //Vector4 newVec = (worldToLocalTransform * torque);
-
+        Vector3 newVec = (worldToLocalTransform * inverseInertiaTensor * worldToLocalTransform.transpose) * torque;
+        Debug.Log(inverseInertiaTensor);
+        Debug.Log(localToWorldTransform);
         Debug.Log(newVec);
-
-        angularAcceleration.x += newVec.x;
-        angularAcceleration.y += newVec.y;
-        angularAcceleration.z += newVec.z;
-
+        angularAcceleration += newVec;
     }
 
     // TIME LOOPS
     void Start()
     {
+        tensorComponent = GetComponent<InertiaTensor3D>();
         position = transform.position;
-        //Mass = mass;
-        mass = Mass;
+        Mass = mass;
     }
-
 
     private void FixedUpdate()
     {
+        UpdateTensors();
         UpdateTransformMatrix();
-        UpdateRotation();
-        UpdatePosition();
+        
         transform.position = position;
         this.transform.rotation = Rotation;
         if (applyForce)
@@ -162,10 +148,16 @@ public class Particle3D : MonoBehaviour
             ApplyForceAtLocation(pointOfForce, newForce);
             applyForce = false;
         }
-        // transform.eulerAngles = new Vector3(0.0f, 0.0f, angle);   
+
+        UpdateRotation();
+        UpdatePosition();
     }
 
-
+    void UpdateTensors()
+    {
+        inertiaTensor = tensorComponent.GetInertiaTensor();
+        inverseInertiaTensor = inertiaTensor.transpose;
+    }
 
     private void UpdateTransformMatrix()
     {
@@ -175,8 +167,8 @@ public class Particle3D : MonoBehaviour
                       new Vector4((2 * Rotation.x * Rotation.z + 2 * Rotation.y * Rotation.w), (2 * Rotation.y * Rotation.z - 2 * Rotation.x * Rotation.w), 1 - (2 * Rotation.x * Rotation.x - 2 * Rotation.y * Rotation.y), position.z),
                       new Vector4(0.0f,0.0f,0.0f,1.0f));
 
-        localToWorldTransform = newTransform;
-        worldToLocalTransform = newTransform.transpose;
+        worldToLocalTransform = newTransform;
+        localToWorldTransform = newTransform.transpose;
     }
     private void UpdateCenterOfMass()
     {
