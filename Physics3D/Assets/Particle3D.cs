@@ -25,16 +25,16 @@ public class Particle3D : MonoBehaviour
     Matrix4x4 inverseInertiaTensor;
     Vector3 localCenterOfmass;
     Vector3 worldCenterOfMass;
-    //public float invInertia;
-    //public Vector2 applyForce;
-    //public Vector2 positionOfForce;
+    public bool applyForce = false;
+    public Vector3 newForce = new Vector3(0.0f,0.0f,0.0f);
+    public Vector3 pointOfForce = new Vector3(0.0f, 0.0f, 0.0f);
 
-    public bool applyDrag;
-    public bool applyGravity;
-    public bool kineticFriction;
-    public bool staticFriction;
-    public bool isSliding;
-    public bool isSpring;
+    //public bool applyDrag;
+    //public bool applyGravity;
+    //public bool kineticFriction;
+    //public bool staticFriction;
+    //public bool isSliding;
+    //public bool isSpring;
     public bool iskinematic = true;
 
     private const float GRAVITY = -10;
@@ -76,7 +76,7 @@ public class Particle3D : MonoBehaviour
         force.Set(0.0f, 0.0f, 0.0f);
     }
     */
-    void updatePositionEulerExplicit(float deltaTime)
+    void UpdatePositionEulerExplicit(float deltaTime)
     {
         position += velocity * deltaTime;
         velocity += acceleration * deltaTime;
@@ -88,7 +88,7 @@ public class Particle3D : MonoBehaviour
         velocity += acceleration * deltaTime;
     }
     
-    void updateRotationEulerExplicit(float deltaTime)
+    void UpdateRotationEulerExplicit(float deltaTime)
     {
         Quaternion newVel = new Quaternion(angularVelocity.x * deltaTime / 2f, angularVelocity.y * deltaTime / 2f, angularVelocity.z * deltaTime / 2f, 0.0f);
         Quaternion rotation = newVel * Rotation;
@@ -101,7 +101,7 @@ public class Particle3D : MonoBehaviour
         Rotation = Rotation.normalized;
     }
 
-    void updateRotationKinematic(float deltaTime)
+    void UpdateRotationKinematic(float deltaTime)
     {
         Quaternion newVel = new Quaternion(((angularVelocity.x * deltaTime) + (angularAcceleration.x * deltaTime * deltaTime) / 2) / 2f,
                                             ((angularVelocity.y * deltaTime) + (angularAcceleration.y * deltaTime * deltaTime) / 2) / 2f,
@@ -118,63 +118,79 @@ public class Particle3D : MonoBehaviour
     }
 
     
-    void applyForceAtLocation(Vector3 pointOfForce, Vector3 newForce)
+    void ApplyForceAtLocation(Vector3 pointOfForce, Vector3 newForce)
     {
         // box inertia tensor
-        inertiaTensor = new Matrix4x4(new Vector4((1 / 12) * mass * (1 * 1 + 1 * 1), 0f, 0f, 0f),
+        Matrix4x4 newMat = new Matrix4x4(new Vector4((1 / 12) * mass * (1 * 1 + 1 * 1), 0f, 0f, 0f),
                                       new Vector4(0f, (1 / 12) * mass * (1 * 1 + 1 * 1), 0f, 0f),
                                       new Vector4(0f, 0f, (1 / 12) * mass * (1 * 1 + 1 * 1), 0f),
                                       new Vector4(0f, 0f, 0f, 1f));
-        inverseInertiaTensor = inertiaTensor.inverse;
+        inertiaTensor = newMat;
+        inverseInertiaTensor = inertiaTensor.transpose;
 
+        torque = Vector3.Cross(pointOfForce, newForce);
 
-        /*
-        if (Shape == shape.rect)
-            invInertia = (1 / 12) * mass * ((pointOfForce.x * pointOfForce.x) + (pointOfForce.y * pointOfForce.y));
-        else if (Shape == shape.circle)
-            invInertia = (1 / 2) * mass * GetComponent<SphereCollider>().radius* GetComponent<SphereCollider>().radius; // *radius squared
-        torque = Vector3.Cross(pointOfForce, newForce).z;
-        angularVelocity += torque;
+        Vector4 newVec = (localToWorldTransform * torque);
+        //Vector4 newVec = (worldToLocalTransform * torque);
 
-        applyForce = new Vector3(0.0f, 0.0f);
-        positionOfForce = new Vector3(0.0f, 0.0f);
-        */
+        Debug.Log(newVec);
+
+        angularAcceleration.x += newVec.x;
+        angularAcceleration.y += newVec.y;
+        angularAcceleration.z += newVec.z;
+
     }
 
     // TIME LOOPS
     void Start()
     {
         position = transform.position;
-        Mass = mass;
+        //Mass = mass;
+        mass = Mass;
     }
 
-    
-    // Update is called once per frame
-    void Update()
-    {
-       
-    }
 
     private void FixedUpdate()
     {
-        //UpdateAcceleration();
-        //applyForceAtLocation(positionOfForce, applyForce);
+        UpdateTransformMatrix();
         UpdateRotation();
         UpdatePosition();
         transform.position = position;
         this.transform.rotation = Rotation;
-       // transform.eulerAngles = new Vector3(0.0f, 0.0f, angle);   
+        if (applyForce)
+        {
+            ApplyForceAtLocation(pointOfForce, newForce);
+            applyForce = false;
+        }
+        // transform.eulerAngles = new Vector3(0.0f, 0.0f, angle);   
     }
 
+
+
+    private void UpdateTransformMatrix()
+    {
+        Matrix4x4 newTransform = 
+        new Matrix4x4(new Vector4(1 - (2 * Rotation.y * Rotation.y + 2 * Rotation.z * Rotation.z), (2 * Rotation.x * Rotation.y + 2 * Rotation.z * Rotation.w), (2 * Rotation.x * Rotation.z - 2 * Rotation.y * Rotation.w), position.x),
+                      new Vector4((2 * Rotation.x * Rotation.y - 2 * Rotation.z * Rotation.w), 1 - (2 * Rotation.x * Rotation.x + 2 * Rotation.z * Rotation.z), (2 * Rotation.y * Rotation.z + 2 * Rotation.x * Rotation.w), position.y),
+                      new Vector4((2 * Rotation.x * Rotation.z + 2 * Rotation.y * Rotation.w), (2 * Rotation.y * Rotation.z - 2 * Rotation.x * Rotation.w), 1 - (2 * Rotation.x * Rotation.x - 2 * Rotation.y * Rotation.y), position.z),
+                      new Vector4(0.0f,0.0f,0.0f,1.0f));
+
+        localToWorldTransform = newTransform;
+        worldToLocalTransform = newTransform.transpose;
+    }
+    private void UpdateCenterOfMass()
+    {
+
+    }
     void UpdateRotation()
     {
         if(iskinematic)
         {
-            updateRotationKinematic(Time.deltaTime);
+            UpdateRotationKinematic(Time.deltaTime);
         }
         else
         {
-            updateRotationEulerExplicit(Time.deltaTime);
+            UpdateRotationEulerExplicit(Time.deltaTime);
         }
     }
 
@@ -183,6 +199,6 @@ public class Particle3D : MonoBehaviour
         if (iskinematic)
             updatePositionKinematic(Time.deltaTime);
         else
-            updatePositionEulerExplicit(Time.deltaTime);
+            UpdatePositionEulerExplicit(Time.deltaTime);
     }
 }
