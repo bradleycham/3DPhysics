@@ -8,7 +8,7 @@ public class Particle3D : MonoBehaviour
     public Vector3 velocity;
     public Vector3 acceleration;
     public Vector3 force;
-    public Quaternion Rotation; 
+    public Quaternion Rotation;
     //public Vector3 norm;
 
     public Vector3 torque;
@@ -20,7 +20,7 @@ public class Particle3D : MonoBehaviour
 
     Matrix4x4 inertiaTensor;
     Matrix4x4 inverseInertiaTensor;
-    Vector3 localCenterOfmass;
+    Vector3 localCenterOfMass;
     Vector3 worldCenterOfMass;
     public bool applyForce = false;
     public Vector3 newForce = new Vector3(0.0f,0.0f,0.0f);
@@ -28,7 +28,7 @@ public class Particle3D : MonoBehaviour
 
     InertiaTensor3D tensorComponent;
     //public bool applyDrag;
-    //public bool applyGravity;
+    public bool applyGravity;
     //public bool kineticFriction;
     //public bool staticFriction;
     //public bool isSliding;
@@ -36,7 +36,7 @@ public class Particle3D : MonoBehaviour
     public bool iskinematic = true;
 
     private const float GRAVITY = -10;
-    private Vector2 GRAVITY_VEC = new Vector2(0, GRAVITY);
+    private Vector3 GRAVITY_VEC = new Vector3(0.0f, -GRAVITY, 0.0f);
 
     [Range(0, Mathf.Infinity)]
     public float mass;
@@ -61,19 +61,20 @@ public class Particle3D : MonoBehaviour
         }
     }
 
-    private void AddForce(Vector3 newForce)
+    public void AddForce(Vector3 newForce)
     {
         force += newForce;
     }
 
-    // POSITION AND ROTATION UPDATE FUNCTIONS
-    /*
     public void UpdateAcceleration()
     {
         acceleration = force * invMass;
         force.Set(0.0f, 0.0f, 0.0f);
+
+        Vector3 updateAngularAcceleration = ((inverseInertiaTensor * worldToLocalTransform.transpose) * worldToLocalTransform) * torque;
+        angularAcceleration = updateAngularAcceleration;
     }
-    */
+
     void UpdatePositionEulerExplicit(float deltaTime)
     {
         position += velocity * deltaTime;
@@ -106,7 +107,6 @@ public class Particle3D : MonoBehaviour
                                             ((angularVelocity.z * deltaTime) + (angularAcceleration.z * deltaTime * deltaTime) / 2) / 2f,
                                               0.0f);
         Quaternion rotation = newVel * Rotation;
-
         
         Rotation.x += rotation.x;
         Rotation.y += rotation.y;
@@ -119,71 +119,63 @@ public class Particle3D : MonoBehaviour
     
     void ApplyForceAtLocation(Vector3 pointOfForce, Vector3 newForce)
     {
-        torque = Vector3.Cross(pointOfForce, newForce);
-
-        Vector3 newVec = (worldToLocalTransform * inverseInertiaTensor * worldToLocalTransform.transpose) * torque;
-        Debug.Log(inverseInertiaTensor);
-        Debug.Log(localToWorldTransform);
-        Debug.Log(newVec);
-        angularAcceleration += newVec;
+        torque = Vector3.Cross(pointOfForce, newForce);        
     }
 
     // TIME LOOPS
     void Start()
     {
         tensorComponent = GetComponent<InertiaTensor3D>();
+        inertiaTensor = tensorComponent.GetInertiaTensor();
+        inverseInertiaTensor = inertiaTensor.transpose;
+
         position = transform.position;
         Mass = mass;
     }
 
     private void FixedUpdate()
     {
-        UpdateTensors();
+        UpdateAcceleration();
+        UpdateRotation();
+        UpdatePosition();
         UpdateTransformMatrix();
-        
-        transform.position = position;
+        UpdateCenterOfMass();
+
         this.transform.rotation = Rotation;
+        transform.position = position;
+
         if (applyForce)
         {
             ApplyForceAtLocation(pointOfForce, newForce);
             applyForce = false;
-        }
-
-        UpdateRotation();
-        UpdatePosition();
+        }     
     }
 
-    void UpdateTensors()
-    {
-        inertiaTensor = tensorComponent.GetInertiaTensor();
-        inverseInertiaTensor = inertiaTensor.transpose;
-    }
 
     private void UpdateTransformMatrix()
     {
         Matrix4x4 newTransform = 
-        new Matrix4x4(new Vector4(1 - (2 * Rotation.y * Rotation.y + 2 * Rotation.z * Rotation.z), (2 * Rotation.x * Rotation.y + 2 * Rotation.z * Rotation.w), (2 * Rotation.x * Rotation.z - 2 * Rotation.y * Rotation.w), position.x),
-                      new Vector4((2 * Rotation.x * Rotation.y - 2 * Rotation.z * Rotation.w), 1 - (2 * Rotation.x * Rotation.x + 2 * Rotation.z * Rotation.z), (2 * Rotation.y * Rotation.z + 2 * Rotation.x * Rotation.w), position.y),
-                      new Vector4((2 * Rotation.x * Rotation.z + 2 * Rotation.y * Rotation.w), (2 * Rotation.y * Rotation.z - 2 * Rotation.x * Rotation.w), 1 - (2 * Rotation.x * Rotation.x - 2 * Rotation.y * Rotation.y), position.z),
-                      new Vector4(0.0f,0.0f,0.0f,1.0f));
+        new Matrix4x4(new Vector4(1f - (2f * Rotation.y * Rotation.y + 2f * Rotation.z * Rotation.z), (2f * Rotation.x * Rotation.y + 2f * Rotation.z * Rotation.w), (2f * Rotation.x * Rotation.z - 2f * Rotation.y * Rotation.w), 0.0f),
+                      new Vector4((2f * Rotation.x * Rotation.y - 2f * Rotation.z * Rotation.w), 1f - (2f * Rotation.x * Rotation.x + 2f * Rotation.z * Rotation.z), (2f * Rotation.y * Rotation.z + 2f * Rotation.x * Rotation.w), 0.0f),
+                      new Vector4((2f * Rotation.x * Rotation.z + 2f * Rotation.y * Rotation.w), (2f * Rotation.y * Rotation.z - 2f * Rotation.x * Rotation.w), 1f - (2f * Rotation.x * Rotation.x - 2f * Rotation.y * Rotation.y), 0.0f),
+                      new Vector4(position.x, position.y, position.z ,1.0f));
 
         worldToLocalTransform = newTransform;
-        localToWorldTransform = newTransform.transpose;
+        localToWorldTransform = newTransform.inverse;
     }
+
     private void UpdateCenterOfMass()
     {
-
+        Vector4 newVec = new Vector4(localCenterOfMass.x, localCenterOfMass.y, localCenterOfMass.z, 1.0f);
+        worldCenterOfMass = worldToLocalTransform * newVec;
     }
+
     void UpdateRotation()
     {
         if(iskinematic)
-        {
             UpdateRotationKinematic(Time.deltaTime);
-        }
         else
-        {
             UpdateRotationEulerExplicit(Time.deltaTime);
-        }
     }
 
     void UpdatePosition()
