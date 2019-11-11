@@ -15,8 +15,8 @@ public class Particle3D : MonoBehaviour
     public Vector3 angularVelocity;
     public Vector3 angularAcceleration;
 
-    Matrix4x4 worldToLocalTransform;
-    Matrix4x4 localToWorldTransform;
+    public Matrix4x4 worldToLocalTransform;
+    public Matrix4x4 localToWorldTransform;
 
     Matrix4x4 inertiaTensor;
     Matrix4x4 inverseInertiaTensor;
@@ -129,7 +129,7 @@ public class Particle3D : MonoBehaviour
         inertiaTensor = tensorComponent.GetInertiaTensor();
         inverseInertiaTensor = inertiaTensor.transpose;
 
-        position = transform.position;
+        position = this.transform.position;
         Mass = mass;
     }
 
@@ -151,7 +151,6 @@ public class Particle3D : MonoBehaviour
         }     
     }
 
-
     private void UpdateTransformMatrix()
     {
         Matrix4x4 newTransform = 
@@ -161,7 +160,7 @@ public class Particle3D : MonoBehaviour
                       new Vector4(position.x, position.y, position.z ,1.0f));
 
         worldToLocalTransform = newTransform;
-        localToWorldTransform = newTransform.inverse;
+        localToWorldTransform = newTransform.transpose;
     }
 
     private void UpdateCenterOfMass()

@@ -6,23 +6,7 @@ public class CollisionHull3D : MonoBehaviour
 {
    
     public float restitution;
-
-    public class HullCollision
-    {
-        public struct Contact
-        {
-            public Vector3 point;
-            public Vector3 normal;
-            public float restitution;
-        }
-
-        public Vector3 closingVelocity;
-        public Vector3 penetration;
-        public CollisionHull3D a;
-        public CollisionHull3D b;
-        public Contact[] contacts = new Contact[4];
-        public bool status;
-    }
+   
     public enum hullType
     {
         AABB,
@@ -30,7 +14,7 @@ public class CollisionHull3D : MonoBehaviour
         Sphere
     }
 
-    public hullType hull;
+    //public hullType hull;
 
    /*
 
@@ -79,95 +63,101 @@ public class CollisionHull3D : MonoBehaviour
 
 
     }
-
-    public static HullCollision SphereSphereCollision(SphereHull sphereHull1, SphereHull sphereHull2)
+    */
+    public static void SphereSphereCollision(CollisionManager.HullCollision col)
     {
         // *IMPORTANT* for circle and square the collision only wirks with obejct1 - object 2 and not viceversa, must be a prob in clollision resolution
-        Vector3 c1Offset = sphereHull1.offset;
-        Vector3 c2Offset = sphereHull2.offset;
+        SphereHull hull1 = col.a.GetComponent<SphereHull>();
+        SphereHull hull2 = col.b.GetComponent<SphereHull>();
+        Vector3 range = (hull2.transform.position + hull2.localCenter) - (hull1.transform.position + hull1.localCenter); // make sure offsets arent screwing things up
+        float overlap = (hull2.radius + hull1.radius) - range.magnitude;
 
-        Vector3 range = (sphereHull2.transform.position + c2Offset) - (sphereHull1.transform.position + c1Offset); // make sure offsets arent screwing things up
-        float overlap = (sphereHull2.radius + sphereHull1.radius) - range.magnitude;
-
-        HullCollision col = new HullCollision();
-        col.a = sphereHull1;
-        col.b = sphereHull2;
+        //HullCollision col = new CollisionManager.HullCollision();
+        //col.a = hull1;
+        //col.b = hull2;
         col.penetration = range * overlap;
 
-        HullCollision.Contact con0 = new HullCollision.Contact();
-        con0.point =  (range.normalized * sphereHull1.radius);
-        con0.point += new Vector3(sphereHull1.transform.position.x, sphereHull1.transform.position.y);
+        CollisionManager.HullCollision.Contact con0 = new CollisionManager.HullCollision.Contact();
+        con0.point = (range.normalized * hull1.radius) + hull1.transform.position;
         con0.normal = range.normalized;
-        con0.restitution = Mathf.Min(sphereHull1.restitution, sphereHull2.restitution);
+        con0.restitution = Mathf.Min(hull1.restitution, hull2.restitution);
 
         col.contacts[0] = con0;
 
-        Particle3D c1 = sphereHull1.GetComponentInParent<Particle3D>();
-        Particle3D c2 = sphereHull2.GetComponentInParent<Particle3D>();
+        Particle3D c1 = hull1.GetComponentInParent<Particle3D>();
+        Particle3D c2 = hull2.GetComponentInParent<Particle3D>();
 
         Vector3 closingVel = c2.velocity - c1.velocity; // started as c1 -c2
 
         col.closingVelocity = closingVel;
 
-        if (overlap > 0)
+        if (overlap >= 0)
         {
             col.status = true;
-            return col;
+           //Debug.Log("touch");
         }
         else
         {
             col.status = false;
-            return col;
         }
     }
-
-    public static HullCollision SphereAABBCollision(SphereHull sphereHull, AABBHull boxHull)
+    
+    public static void SphereAABBCollision(CollisionManager.HullCollision collision)
     {
-        Particle3D A = boxHull.GetComponent<Particle3D>();
-        Particle3D B = sphereHull.GetComponent<Particle3D>();
-
-        Vector3 closestPoint = new Vector3(0.0f, 0.0f);
-        Vector3 range = (sphereHull.transform.position + sphereHull.offset) - (boxHull.transform.position + boxHull.offset);
+        AABBHull boxHull;
+        SphereHull sphere;
+        if (collision.a.GetHullType() == hullType.AABB)
+        {
+            boxHull = collision.a.GetComponent<AABBHull>();
+            sphere = collision.b.GetComponent<SphereHull>();
+        }
+        else
+        {
+            boxHull = collision.b.GetComponent<AABBHull>();
+            sphere = collision.a.GetComponent<SphereHull>();
+        }
+        
+        Vector3 closestPoint;
+        Vector3 range = (boxHull.transform.position + boxHull.localCenter) - (sphere.transform.position + sphere.localCenter);
         
 
-        closestPoint = new Vector3(Mathf.Clamp(range.x, -boxHull.halfX, boxHull.halfX), Mathf.Clamp(range.y, -boxHull.halfY, boxHull.halfY));
+        closestPoint = new Vector3(Mathf.Clamp(range.x, -boxHull.halfSize.x, boxHull.halfSize.x), Mathf.Clamp(range.y, -boxHull.halfSize.y, boxHull.halfSize.y), Mathf.Clamp(range.z, -boxHull.halfSize.z, boxHull.halfSize.z));
 
-        HullCollision col = new HullCollision();
-        col.a = boxHull;
-        col.b = sphereHull;
-        Vector3 closingVel = B.velocity - A.velocity;
-        Vector3 penetration = range - (closestPoint - sphereHull.transform.position + sphereHull.offset);
-        col.closingVelocity = closingVel;
-        col.penetration = penetration;
+        Vector3 closingVel = sphere.GetComponent<Particle3D>().velocity - boxHull.GetComponent<Particle3D>().velocity;
+        Vector3 penetration = range - closestPoint;
+        collision.closingVelocity = closingVel;
+        collision.penetration = penetration;
 
-        HullCollision.Contact con0 = new HullCollision.Contact();
+        CollisionManager.HullCollision.Contact con0 = new CollisionManager.HullCollision.Contact();
         con0.point = closestPoint;
-        con0.restitution = Mathf.Min(boxHull.restitution, sphereHull.restitution);
+        con0.restitution = Mathf.Min(boxHull.restitution, sphere.restitution);
 
         Vector3 collisionNormal = new Vector3();
 
 
-        if ((range - closestPoint).magnitude - sphereHull.radius < 0)
+        if (penetration.magnitude <= sphere.radius)
         {
-            if (con0.point.x == boxHull.halfX)//added mathf
-                collisionNormal = new Vector3(1.0f, 0.0f);
-            if (con0.point.x == -boxHull.halfX)//added mathf
-                collisionNormal = new Vector3(-1.0f, 0.0f);
-            if (con0.point.y == boxHull.halfY)
-                collisionNormal = new Vector3(0.0f, 1.0f);
-            if (con0.point.y == -boxHull.halfY)
-                collisionNormal = new Vector3(0.0f, -1.0f);
+            if (con0.point.x == boxHull.halfSize.x)//added mathf
+                collisionNormal = new Vector3(1.0f, 0.0f, 0.0f);
+            if (con0.point.x == -boxHull.halfSize.x)//added mathf
+                collisionNormal = new Vector3(-1.0f, 0.0f, 0.0f);
+            if (con0.point.y == boxHull.halfSize.y)
+                collisionNormal = new Vector3(0.0f, 1.0f, 0.0f);
+            if (con0.point.y == -boxHull.halfSize.y)
+                collisionNormal = new Vector3(0.0f, -1.0f, 0.0f);
+            if (con0.point.y == boxHull.halfSize.y)
+                collisionNormal = new Vector3(0.0f, 0.0f, 1.0f);
+            if (con0.point.y == -boxHull.halfSize.y)
+                collisionNormal = new Vector3(0.0f, 0.0f, -1.0f);
 
             con0.normal = collisionNormal;
 
-            col.status = true;
-            col.contacts[0] = con0;
+            collision.status = true;
+            collision.contacts[0] = con0;
         }
-        else col.status = false; 
-
-        return col;
+        else collision.status = false; 
     }
-    
+    /*
     public static HullCollision SphereOBBCollision(SphereHull sphereHull, OBBHull OBBHull)
     { 
         Particle3D A = sphereHull.GetComponent<Particle3D>();
@@ -218,40 +208,38 @@ public class CollisionHull3D : MonoBehaviour
         }
         return col;
     }
-    
-    public static HullCollision AABBAABBCollision(AABBHull boxHull1, AABBHull boxHull2)
+    */
+    public static void AABBAABBCollision(CollisionManager.HullCollision col)
     {
         Vector3 min0, max0, min1, max1;
-        Vector3 b1Offset = boxHull1.offset;
-        Vector3 b2Offset = boxHull2.offset;
-        Particle3D A = boxHull1.GetComponent<Particle3D>();
-        Particle3D B = boxHull2.GetComponent<Particle3D>();
 
-        min0 = boxHull1.transform.position - new Vector3(boxHull1.halfX, boxHull1.halfY) + b1Offset;
-        max0 = boxHull1.transform.position + new Vector3(boxHull1.halfX, boxHull1.halfY) + b1Offset;
-        min1 = boxHull2.transform.position - new Vector3(boxHull2.halfX, boxHull2.halfY) + b2Offset;
-        max1 = boxHull2.transform.position + new Vector3(boxHull2.halfX, boxHull2.halfY) + b2Offset;
+        AABBHull A = col.a.GetComponent<AABBHull>();
+        AABBHull B = col.b.GetComponent<AABBHull>();
 
-        Vector3 range = (boxHull2.transform.position + b2Offset) - (boxHull1.transform.position + b1Offset); // make sure offsets arent screwing things up
+        min0 = A.transform.position - A.halfSize + A.localCenter;
+        max0 = A.transform.position + A.halfSize + A.localCenter;
+        min1 = B.transform.position - B.halfSize + B.localCenter;
+        max1 = B.transform.position + B.halfSize + B.localCenter;
 
-        HullCollision col = new HullCollision();
-        col.a = boxHull1;
-        col.b = boxHull2;
+        Vector3 range = (B.transform.position + B.localCenter) - (A.transform.position + A.localCenter); // make sure offsets arent screwing things up
 
-        float xOverlap = boxHull1.halfX + boxHull2.halfX - Mathf.Abs(range.x);
-        float yOverlap = boxHull1.halfY + boxHull2.halfY - Mathf.Abs(range.y);
+        //HullCollision col = new HullCollision();
+        //col.a = boxHull1;
+        //col.b = boxHull2;
 
-        //TRANSPORTATION
-        
+        float xOverlap = A.halfSize.x + B.halfSize.x - Mathf.Abs(range.x);
+        float yOverlap = A.halfSize.y + B.halfSize.y - Mathf.Abs(range.y);
+        float zOverlap = A.halfSize.z + B.halfSize.z - Mathf.Abs(range.z);
+
         col.penetration = new Vector3(xOverlap, yOverlap);
 
         //Vector3 closingVel = A.velocity - B.velocity;
-        Vector3 closingVel = B.velocity - A.velocity;
+        Vector3 closingVel = B.GetComponent<Particle3D>().velocity - A.GetComponent<Particle3D>().velocity;
         col.closingVelocity = closingVel;
 
-        HullCollision.Contact con0 = new HullCollision.Contact();
-        con0.point = new Vector3(Mathf.Clamp(range.x, -boxHull1.halfX, boxHull1.halfX), Mathf.Clamp(range.y, -boxHull1.halfY, boxHull1.halfY));
-        con0.restitution = Mathf.Min(boxHull1.restitution, boxHull2.restitution);
+        CollisionManager.HullCollision.Contact con0 = new CollisionManager.HullCollision.Contact();
+        con0.point = new Vector3(Mathf.Clamp(range.x, -A.halfSize.x, A.halfSize.x), Mathf.Clamp(range.y, -A.halfSize.y, A.halfSize.y), Mathf.Clamp(range.z, -A.halfSize.z, A.halfSize.z));
+        con0.restitution = Mathf.Min(A.restitution, B.restitution);
         
         if (max0.x >= min1.x && max1.x >= min0.x)
         {
@@ -259,14 +247,18 @@ public class CollisionHull3D : MonoBehaviour
             {
                 Vector3 collisionNormal = new Vector3();
 
-                if (con0.point.x == boxHull1.halfX)//added mathf
-                    collisionNormal = new Vector3(1.0f, 0.0f);
-                if (con0.point.x == -boxHull1.halfX)//added mathf
-                    collisionNormal = new Vector3(-1.0f, 0.0f);
-                if (con0.point.y == boxHull1.halfY)
-                    collisionNormal = new Vector3(0.0f, 1.0f);
-                if (con0.point.y == -boxHull1.halfY)
-                    collisionNormal = new Vector3(0.0f, -1.0f);
+                if (con0.point.x == A.halfSize.x)//added mathf
+                    collisionNormal = new Vector3(1.0f, 0.0f, 0.0f);
+                if (con0.point.x == -A.halfSize.x)//added mathf
+                    collisionNormal = new Vector3(-1.0f, 0.0f, 0.0f);
+                if (con0.point.y == A.halfSize.y)
+                    collisionNormal = new Vector3(0.0f, 1.0f, 0.0f);
+                if (con0.point.y == -A.halfSize.y)
+                    collisionNormal = new Vector3(0.0f, -1.0f, 0.0f);
+                if (con0.point.z == A.halfSize.z)
+                    collisionNormal = new Vector3(0.0f, 0.0f, 1.0f);
+                if (con0.point.z == -A.halfSize.z)
+                    collisionNormal = new Vector3(0.0f, 0.0f, -1.0f);
 
                 con0.normal = collisionNormal;
 
@@ -275,9 +267,9 @@ public class CollisionHull3D : MonoBehaviour
         }    
         else col.status = false;
         col.contacts[0] = con0;
-        return col;   
+ 
     }
-    
+    /*
     public static HullCollision AABBOBBCollision(AABBHull AABBHull, OBBHull OBBHull)
     {
         Particle3D A = AABBHull.GetComponent<Particle3D>();
@@ -338,8 +330,36 @@ public class CollisionHull3D : MonoBehaviour
         col.contacts[0] = con0;
         return col;
     }
-    
-    public static HullCollision OBBOBBCollision(OBBHull boxHull1, OBBHull boxHull2)
+    */
+    public static void OBBOBBCollision(CollisionManager.HullCollision collision)
+    {
+        OBBHull A = collision.a.GetComponent<OBBHull>();
+        OBBHull B = collision.b.GetComponent<OBBHull>();
+        Particle3D aParticle = collision.a.GetComponent<Particle3D>();
+        Particle3D bParticle = collision.b.GetComponent<Particle3D>();
+        Vector3[] shape1Corners;
+        Vector3[] shape2Corners;
+        shape1Corners = new Vector3[8];
+        shape2Corners = new Vector3[8];
+        Vector3 rotPosition = aParticle.worldToLocalTransform.transpose * A.halfSize;
+        Vector3 corner1 = aParticle.localToWorldTransform * new Vector3(A.halfSize.x, A.halfSize.y, A.halfSize.z);
+        
+        Vector3 corner2 = aParticle.worldToLocalTransform.transpose * new Vector3(A.halfSize.x, -A.halfSize.y, A.halfSize.z);
+        Vector3 corner3 = aParticle.worldToLocalTransform.transpose * new Vector3(A.halfSize.x, A.halfSize.y, -A.halfSize.z);
+        Vector3 corner4 = aParticle.worldToLocalTransform.transpose * new Vector3(A.halfSize.x, -A.halfSize.y, A.halfSize.z);
+        Vector3 corner5 = aParticle.worldToLocalTransform.transpose * new Vector3(-A.halfSize.x, A.halfSize.y, -A.halfSize.z);
+        Vector3 corner6 = aParticle.worldToLocalTransform.transpose * new Vector3(-A.halfSize.x, -A.halfSize.y, A.halfSize.z);
+        Vector3 corner7 = aParticle.worldToLocalTransform.transpose * new Vector3(-A.halfSize.x, A.halfSize.y, -A.halfSize.z);
+        Vector3 corner8 = aParticle.worldToLocalTransform.transpose * new Vector3(-A.halfSize.x, -A.halfSize.y, -A.halfSize.z);
+        //Debug.Log(corner1);
+        Vector3[] normals = new Vector3[6];
+        float[] shape1MinMax = new float[2];
+        float[] shape2MinMax = new float[2];
+
+        
+    }
+    /*
+    public static void OBBOBBCollision(OBBHull boxHull1, OBBHull boxHull2)
     {
         Particle3D A = boxHull1.GetComponent<Particle3D>();
         Particle3D B = boxHull2.GetComponent<Particle3D>();
@@ -347,7 +367,7 @@ public class CollisionHull3D : MonoBehaviour
         Vector3[] shape2Corners;
         shape1Corners = new Vector3[4];
         shape2Corners = new Vector3[4];
-        Vector3[] normals = new Vector3[4];
+        Vector3[] normals = new Vector3[6];
         float[] shape1MinMax = new float[2];
         float[] shape2MinMax = new float[2];
 
@@ -397,8 +417,8 @@ public class CollisionHull3D : MonoBehaviour
         col.contacts[0] = con0;
         return col;
     }
-    
-    
+    */
+
     static Vector3 getUpNormal(float theta)
     {
         float rad = theta * Mathf.Deg2Rad;
@@ -426,7 +446,7 @@ public class CollisionHull3D : MonoBehaviour
         //Debug.Log(minMax[0] + " " + minMax[1]);
         return minMax;
     }
-
+    /*
     static Vector3[] getRotatedCorners(OBBHull newHull)
     {
         Vector3[] returnPoints = new Vector3[4];
@@ -437,7 +457,7 @@ public class CollisionHull3D : MonoBehaviour
 
         return returnPoints;
     }
-
+    */
     public static Vector3 getRotatedPoint(Vector3 cornerPos, Vector3 centerPos, float theta)
     {
         float rad = theta * Mathf.Deg2Rad;
@@ -462,5 +482,6 @@ public class CollisionHull3D : MonoBehaviour
     {
         return lowerBound <= val && val <= upperBound;
     }
-    */
+
+   
 }

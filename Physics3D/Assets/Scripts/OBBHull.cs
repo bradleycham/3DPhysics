@@ -2,24 +2,33 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class OBBHull : CollisionHull3D
+public class OBBHull : Hull3D
 {
-    public Vector3 offset;
-    public float halfX;
-    public float halfY;
-    public float halfZ;
-    //public float startingRotation;
-    Quaternion currentRotation;
-    // Start is called before the first frame update
+    public Vector3 halfSize;
     void Start()
     {
-        hull = hullType.OBB;
-        //GameObject.Find("CollisionManager").GetComponent<CollisionManager>().AddCollisionHull(this);
+        GameObject.Find("CollisionManager").GetComponent<CollisionManager>().AddCollisionHull(this);
+        type = CollisionHull3D.hullType.OBB;
     }
 
-    // Update is called once per frame
-    void Update()
+    void OnDrawGizmosSelected()
     {
-        currentRotation = this.gameObject.transform.rotation;
+        
+        Matrix4x4 newMat = GetComponent<Particle3D>().worldToLocalTransform;
+        Vector3 thisPos = GetComponent<Particle3D>().position;
+        Vector3 testVec = newMat * halfSize;
+        
+
+        //testVec = thisPos + testVec;
+        testVec = newMat.transpose * testVec;
+        testVec += thisPos;
+        //testVec = newMat.transpose * testVec;
+        //testVec = newMat * testVec;
+        //testVec -= thisPos;
+
+        //Debug.Log(testVec.magnitude);
+        Gizmos.color = Gizmos.color = new Color(0, 1, 0, 1f); // clear green
+        Gizmos.DrawLine(this.transform.position, testVec);
+      
     }
 }
