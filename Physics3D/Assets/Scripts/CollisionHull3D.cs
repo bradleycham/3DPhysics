@@ -174,7 +174,7 @@ public class CollisionHull3D : MonoBehaviour
         }
 
         Vector3 closestPoint;
-        Vector3 localRange = (boxParticle.position) - (boxParticle.GetLocalToWorldtransform(false).MultiplyPoint(sphereParticle.position));
+        Vector3 localRange = (boxParticle.GetLocalToWorldtransform(false).MultiplyPoint(boxParticle.position)) - (boxParticle.GetLocalToWorldtransform(false).MultiplyPoint(sphereParticle.position));
         Vector3 range = (boxParticle.position) - (sphereParticle.position);
 
 
@@ -184,10 +184,10 @@ public class CollisionHull3D : MonoBehaviour
 
        
         Vector3 closingVel = sphereParticle.GetComponent<Particle3D>().velocity - boxParticle.GetComponent<Particle3D>().velocity;
-        Vector3 penetration = range - closestPoint;
+        Vector3 penetration = localRange - closestPoint;
 
-        Debug.DrawLine(new Vector3(), range);
-        if (Mathf.Abs(penetration.magnitude) <= sphereParticle.GetComponent<SphereHull>().radius)
+        Debug.DrawLine(boxParticle.position, penetration);
+        if (penetration.magnitude <= sphereParticle.GetComponent<SphereHull>().radius)
         {
             col.status = true;
         }
