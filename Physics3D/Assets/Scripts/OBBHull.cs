@@ -13,22 +13,9 @@ public class OBBHull : Hull3D
 
     void OnDrawGizmosSelected()
     {
-        
-        Matrix4x4 newMat = GetComponent<Particle3D>().worldToLocalTransform;
-        Vector3 thisPos = GetComponent<Particle3D>().position;
-        Vector3 testVec = newMat * halfSize;
-        
-
-        //testVec = thisPos + testVec;
-        testVec = newMat.transpose * testVec;
-        testVec += thisPos;
-        //testVec = newMat.transpose * testVec;
-        //testVec = newMat * testVec;
-        //testVec -= thisPos;
-
-        //Debug.Log(testVec.magnitude);
-        Gizmos.color = Gizmos.color = new Color(0, 1, 0, 1f); // clear green
-        Gizmos.DrawLine(this.transform.position, testVec);
-      
+        // Draws a 5 unit long red line in front of the object
+        // Draw a yellow sphere at the transform's position
+        Gizmos.color = Gizmos.color = new Color(0, 1, 0, 0.3f); // clear green
+        Gizmos.DrawSphere(transform.position + localCenter, boundingVolumeRadius);
     }
 }

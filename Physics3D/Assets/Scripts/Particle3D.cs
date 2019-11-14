@@ -153,20 +153,22 @@ public class Particle3D : MonoBehaviour
 
     private void UpdateTransformMatrix()
     {
-        Matrix4x4 newTransform = 
-        new Matrix4x4(new Vector4(1f - (2f * Rotation.y * Rotation.y + 2f * Rotation.z * Rotation.z), (2f * Rotation.x * Rotation.y + 2f * Rotation.z * Rotation.w), (2f * Rotation.x * Rotation.z - 2f * Rotation.y * Rotation.w), 0.0f),
+        //Matrix4x4 newTransform = 
+        
+            /*new Matrix4x4(new Vector4(1f - (2f * Rotation.y * Rotation.y + 2f * Rotation.z * Rotation.z), (2f * Rotation.x * Rotation.y + 2f * Rotation.z * Rotation.w), (2f * Rotation.x * Rotation.z - 2f * Rotation.y * Rotation.w), 0.0f),
                       new Vector4((2f * Rotation.x * Rotation.y - 2f * Rotation.z * Rotation.w), 1f - (2f * Rotation.x * Rotation.x + 2f * Rotation.z * Rotation.z), (2f * Rotation.y * Rotation.z + 2f * Rotation.x * Rotation.w), 0.0f),
                       new Vector4((2f * Rotation.x * Rotation.z + 2f * Rotation.y * Rotation.w), (2f * Rotation.y * Rotation.z - 2f * Rotation.x * Rotation.w), 1f - (2f * Rotation.x * Rotation.x - 2f * Rotation.y * Rotation.y), 0.0f),
                       new Vector4(position.x, position.y, position.z ,1.0f));
+                      */
+        worldToLocalTransform = Matrix4x4.TRS(position,Rotation,this.transform.localScale);
+        localToWorldTransform = worldToLocalTransform.transpose;
 
-        worldToLocalTransform = newTransform;
-        localToWorldTransform = newTransform.transpose;
     }
 
     private void UpdateCenterOfMass()
     {
-        Vector4 newVec = new Vector4(localCenterOfMass.x, localCenterOfMass.y, localCenterOfMass.z, 1.0f);
-        worldCenterOfMass = worldToLocalTransform * newVec;
+        Vector3 newVec = new Vector3(localCenterOfMass.x, localCenterOfMass.y, localCenterOfMass.z);
+        worldCenterOfMass = worldToLocalTransform.MultiplyPoint(newVec);
     }
 
     void UpdateRotation()
@@ -175,6 +177,24 @@ public class Particle3D : MonoBehaviour
             UpdateRotationKinematic(Time.deltaTime);
         else
             UpdateRotationEulerExplicit(Time.deltaTime);
+    }
+
+    public Matrix4x4 GetLocalToWorldtransform(bool usingForces)
+    {
+        if(usingForces)
+        {
+            return localToWorldTransform;
+        }
+        else return transform.localToWorldMatrix;
+    }
+
+    public Matrix4x4 GetWorldToLocaltransform(bool usingForces)
+    {
+        if (usingForces)
+        {
+            return worldToLocalTransform;
+        }
+        else return transform.worldToLocalMatrix;
     }
 
     void UpdatePosition()
