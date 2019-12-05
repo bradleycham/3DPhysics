@@ -1,4 +1,4 @@
-﻿using System.Collections;
+﻿    using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -111,11 +111,13 @@ public class CollisionHull3D : MonoBehaviour
         SphereHull sphere;
         if (collision.a.GetHullType() == hullType.AABB)
         {
+
             boxHull = collision.a.GetComponent<AABBHull>();
             sphere = collision.b.GetComponent<SphereHull>();
         }
         else
         {
+            Debug.Log("flipped");
             boxHull = collision.b.GetComponent<AABBHull>();
             sphere = collision.a.GetComponent<SphereHull>();
         }
@@ -159,6 +161,8 @@ public class CollisionHull3D : MonoBehaviour
         }
         else collision.status = false; 
     }
+
+
     public static void SphereOBBCollision(CollisionManager.HullCollision col)
     {
         
@@ -166,8 +170,11 @@ public class CollisionHull3D : MonoBehaviour
         Particle3D boxParticle;
         OBBHull obbHull;
         SphereHull sphereHull;
+        bool flip = false;
         if (col.a.GetComponent<Hull3D>().GetHullType() == CollisionHull3D.hullType.Sphere)
         {
+            Debug.Log("unflipped");
+
             obbHull = col.b.GetComponent<OBBHull>();
             sphereHull = col.a.GetComponent<SphereHull>();
 
@@ -176,6 +183,9 @@ public class CollisionHull3D : MonoBehaviour
         }
         else
         {
+            flip = true;
+            Debug.Log("flipped");
+
             obbHull = col.a.GetComponent<OBBHull>();
             sphereHull = col.b.GetComponent<SphereHull>();
 
@@ -211,12 +221,21 @@ public class CollisionHull3D : MonoBehaviour
         if (closestPoint.z == -obbHull.halfSize.z)
             collisionNormal =  new Vector3(0.0f, 0.0f, -1.0f);
 
-        col.contacts[0].normal = boxParticle.GetLocalToWorldtransform(false).rotation * collisionNormal;
-        col.contacts[0].restitution = Mathf.Min(obbHull.restitution, sphereHull.restitution);
-
         Vector3 penetration = localRange - closestPoint;
 
-        col.penetration = penetration;
+        col.contacts[0].normal = boxParticle.GetLocalToWorldtransform(false).rotation * collisionNormal;
+
+        col.contacts[0].restitution = Mathf.Min(obbHull.restitution, sphereHull.restitution);
+        /*
+        if (flip)
+        {
+            CollisionManager.HullCollision swapCol = new CollisionManager.HullCollision();
+            swapCol.a = col.a;
+            swapCol.b = col.b;
+            col.b = swapCol.a;
+            col.a = swapCol.b;
+        }
+        */
         Debug.DrawLine(boxParticle.position, penetration);
         if (penetration.magnitude <= sphereParticle.GetComponent<SphereHull>().radius)
         {
@@ -295,7 +314,6 @@ public class CollisionHull3D : MonoBehaviour
         {
             transformatA = collision.b.GetComponent<Particle3D>().GetLocalToWorldtransform(false);
             transformatB = collision.a.GetComponent<Particle3D>().GetLocalToWorldtransform(false);
-            flip = true;
         }
         
 
