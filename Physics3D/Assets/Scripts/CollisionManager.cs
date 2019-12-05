@@ -35,9 +35,19 @@ public class CollisionManager : MonoBehaviour
     {
         VolumeBoundChecks();
         NarrowCollisionCheck();
-        //Debug.Log(Collisions.Count);
+        Resolution();
         Collisions.Clear();
 
+    }
+
+
+    void Resolution()
+    {
+        foreach(HullCollision col in Collisions)
+        {
+            if(col.status)
+                CollisionHull3D.ResolveCollision(col);
+        }
     }
 
     void VolumeBoundChecks()

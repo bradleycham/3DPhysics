@@ -199,6 +199,11 @@ public class Particle3D : MonoBehaviour
 
     void UpdatePosition()
     {
+        if(applyGravity)
+        {
+            AddForce(ForceGenerator.GenerateForce_gravity(Vector3.up, GRAVITY, mass));
+        }
+
         if (iskinematic)
             updatePositionKinematic(Time.deltaTime);
         else
