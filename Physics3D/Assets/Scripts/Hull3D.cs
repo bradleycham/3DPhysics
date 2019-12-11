@@ -4,6 +4,7 @@ using UnityEngine;
 
 public class Hull3D : MonoBehaviour
 {
+    public bool solid;
     public Vector3 localCenter;
     public float restitution;
     public float boundingVolumeRadius;

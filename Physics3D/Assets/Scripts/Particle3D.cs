@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
+
 public class Particle3D : MonoBehaviour
 {
     public Vector3 position;
@@ -25,9 +26,10 @@ public class Particle3D : MonoBehaviour
     public bool applyForce = false;
     public Vector3 newForce = new Vector3(0.0f,0.0f,0.0f);
     public Vector3 pointOfForce = new Vector3(0.0f, 0.0f, 0.0f);
+    public Vector3 lastVelocity;
 
     InertiaTensor3D tensorComponent;
-    //public bool applyDrag;
+    public bool applyDrag;
     public bool applyGravity;
     //public bool kineticFriction;
     //public bool staticFriction;
@@ -107,11 +109,12 @@ public class Particle3D : MonoBehaviour
                                             ((angularVelocity.z * deltaTime) + (angularAcceleration.z * deltaTime * deltaTime) / 2) / 2f,
                                               0.0f);
         Quaternion rotation = newVel * Rotation;
-        
+
         Rotation.x += rotation.x;
         Rotation.y += rotation.y;
         Rotation.z += rotation.z;
         Rotation.w += rotation.w;
+
         angularVelocity += angularAcceleration * deltaTime;
         Rotation = Rotation.normalized;
     }
@@ -129,6 +132,7 @@ public class Particle3D : MonoBehaviour
         inertiaTensor = tensorComponent.GetInertiaTensor();
         inverseInertiaTensor = inertiaTensor.transpose;
 
+        Rotation = this.transform.rotation;
         position = this.transform.position;
         Mass = mass;
     }
@@ -142,13 +146,15 @@ public class Particle3D : MonoBehaviour
         UpdateCenterOfMass();
 
         this.transform.rotation = Rotation;
-        transform.position = position;
+        this.transform.position = position;
 
         if (applyForce)
         {
             ApplyForceAtLocation(pointOfForce, newForce);
             applyForce = false;
-        }     
+        }
+        
+        lastVelocity = velocity;
     }
 
     private void UpdateTransformMatrix()
@@ -160,7 +166,7 @@ public class Particle3D : MonoBehaviour
                       new Vector4((2f * Rotation.x * Rotation.z + 2f * Rotation.y * Rotation.w), (2f * Rotation.y * Rotation.z - 2f * Rotation.x * Rotation.w), 1f - (2f * Rotation.x * Rotation.x - 2f * Rotation.y * Rotation.y), 0.0f),
                       new Vector4(position.x, position.y, position.z ,1.0f));
                       */
-        worldToLocalTransform = Matrix4x4.TRS(position,Rotation,this.transform.localScale);
+        worldToLocalTransform = Matrix4x4.TRS(position, Rotation, this.transform.localScale);
         localToWorldTransform = worldToLocalTransform.transpose;
 
     }
@@ -199,9 +205,13 @@ public class Particle3D : MonoBehaviour
 
     void UpdatePosition()
     {
-        if(applyGravity)
+        if (applyGravity)
         {
             AddForce(ForceGenerator.GenerateForce_gravity(Vector3.up, GRAVITY, mass));
+        }
+        if (applyDrag)
+        {
+            AddForce(ForceGenerator.GenerateForce_drag(velocity, new Vector2(), 1.0f, 1.0f, 0.05f));
         }
 
         if (iskinematic)
