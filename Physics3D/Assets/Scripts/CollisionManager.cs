@@ -69,7 +69,7 @@ public class CollisionManager : MonoBehaviour
         float dot;
         for (int i = 0; i < allColliders.Count; i++)
         {
-            //allColliders[i].gameObject.GetComponent<Renderer>().material.color = Color.red;
+            allColliders[i].gameObject.GetComponent<Renderer>().material.color = Color.red;
             if (i != allColliders.Count - 1) // if i is not the last collider in the array
                 for (int j = i + 1; j < allColliders.Count; j++) // compare it with all colliders after it
                 {
@@ -78,8 +78,10 @@ public class CollisionManager : MonoBehaviour
                     hull1 = allColliders[i];
                     hull2 = allColliders[j];
 
-                       
-                        if (hull1.transform.position.magnitude <= hull2.transform.position.magnitude)
+                    col.a = hull1;
+                    col.b = hull2;
+                    /*
+                    if (hull1.transform.position.magnitude <= hull2.transform.position.magnitude)
                         {
                             col.a = hull1;
                             col.b = hull2;
@@ -89,7 +91,7 @@ public class CollisionManager : MonoBehaviour
                             col.a = hull2;
                             col.b = hull1;
                         }
-                        
+                        */
                         range = (col.b.transform.position - col.a.transform.position);
 
                         radialSum = hull1.boundingVolumeRadius + hull2.boundingVolumeRadius;
@@ -114,7 +116,7 @@ public class CollisionManager : MonoBehaviour
         for (int i = 0; i < Collisions.Count; i++)
         {
             col = Collisions[i];
-
+            
             if (col.a.GetHullType() == CollisionHull3D.hullType.Sphere)
             {
                 if (col.b.GetHullType() == CollisionHull3D.hullType.Sphere) // sphere sphere
@@ -122,8 +124,8 @@ public class CollisionManager : MonoBehaviour
                     CollisionHull3D.SphereSphereCollision(col);
                     if(col.status)
                     {
-                        //col.a.gameObject.GetComponent<Renderer>().material.color = Color.green;
-                        //col.b.gameObject.GetComponent<Renderer>().material.color = Color.green;
+                        col.a.gameObject.GetComponent<Renderer>().material.color = Color.green;
+                        col.b.gameObject.GetComponent<Renderer>().material.color = Color.green;
                     }
                 }
                 else if (col.b.GetHullType() == CollisionHull3D.hullType.AABB) // sphere aabb
@@ -131,7 +133,8 @@ public class CollisionManager : MonoBehaviour
                     CollisionHull3D.SphereAABBCollision(col);
                     if (col.status)
                     {
-                        
+                        col.a.gameObject.GetComponent<Renderer>().material.color = Color.green;
+                        col.b.gameObject.GetComponent<Renderer>().material.color = Color.green;
                     }
                 }
                 else if (col.b.GetHullType() == CollisionHull3D.hullType.OBB) // sphere obb
@@ -139,7 +142,8 @@ public class CollisionManager : MonoBehaviour
                     CollisionHull3D.SphereOBBCollision(col);
                     if (col.status)
                     {
-                        
+                        col.a.gameObject.GetComponent<Renderer>().material.color = Color.green;
+                        col.b.gameObject.GetComponent<Renderer>().material.color = Color.green;
                     }
                 }
             }
@@ -150,7 +154,8 @@ public class CollisionManager : MonoBehaviour
                     CollisionHull3D.SphereAABBCollision(col);
                     if (col.status)
                     {
-                   
+                        col.a.gameObject.GetComponent<Renderer>().material.color = Color.green;
+                        col.b.gameObject.GetComponent<Renderer>().material.color = Color.green;
                     }
                 }
                 else if (col.b.GetHullType() == CollisionHull3D.hullType.AABB) // aabb aabb
@@ -158,17 +163,20 @@ public class CollisionManager : MonoBehaviour
                     CollisionHull3D.AABBAABBCollision(col);
                     if (col.status)
                     {
-                      
+                        col.a.gameObject.GetComponent<Renderer>().material.color = Color.green;
+                        col.b.gameObject.GetComponent<Renderer>().material.color = Color.green;
                     }
                 }
+                /*
                 else if (col.b.GetHullType() == CollisionHull3D.hullType.OBB) // aabb obb
                 {
                     CollisionHull3D.AABBOBBCollision(col);
                     if (col.status)
                     {
-                      
+                        col.a.gameObject.GetComponent<Renderer>().material.color = Color.green;
+                        col.b.gameObject.GetComponent<Renderer>().material.color = Color.green;
                     }
-                }
+                }*/
             }
             else if (col.a.GetHullType() == CollisionHull3D.hullType.OBB) // 
             {
@@ -177,7 +185,8 @@ public class CollisionManager : MonoBehaviour
                     CollisionHull3D.SphereOBBCollision(col);
                     if (col.status)
                     {
-                     
+                        col.a.gameObject.GetComponent<Renderer>().material.color = Color.green;
+                        col.b.gameObject.GetComponent<Renderer>().material.color = Color.green;
                     }
                 }
                 /*

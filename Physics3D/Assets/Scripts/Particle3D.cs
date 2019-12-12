@@ -166,7 +166,7 @@ public class Particle3D : MonoBehaviour
                       new Vector4((2f * Rotation.x * Rotation.z + 2f * Rotation.y * Rotation.w), (2f * Rotation.y * Rotation.z - 2f * Rotation.x * Rotation.w), 1f - (2f * Rotation.x * Rotation.x - 2f * Rotation.y * Rotation.y), 0.0f),
                       new Vector4(position.x, position.y, position.z ,1.0f));
                       */
-        worldToLocalTransform = Matrix4x4.TRS(position, Rotation, this.transform.localScale);
+        worldToLocalTransform = Matrix4x4.TRS(position, Rotation, transform.localScale);
         localToWorldTransform = worldToLocalTransform.transpose;
 
     }

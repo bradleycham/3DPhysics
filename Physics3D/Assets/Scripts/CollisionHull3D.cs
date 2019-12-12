@@ -24,6 +24,7 @@ public class CollisionHull3D : MonoBehaviour
 
         Particle3D A = col.a.GetComponent<Particle3D>();
         Particle3D B = col.b.GetComponent<Particle3D>();
+        /*
         if(col.a.GetHullType() == hullType.OBB && col.b.GetHullType() == hullType.Sphere)
         {
             A = col.a.GetComponent<Particle3D>();
@@ -33,7 +34,7 @@ public class CollisionHull3D : MonoBehaviour
         {
             A = col.b.GetComponent<Particle3D>();
             B = col.a.GetComponent<Particle3D>();
-        }
+        }*/
         float invAMass;
         float invBMass;
         if (A.mass == 0) invAMass = 0;
@@ -69,7 +70,7 @@ public class CollisionHull3D : MonoBehaviour
             B.velocity += invBMass * impulse;
             float percent = 0.2f;
             float slop = 0.01f;
-            Vector3 correction = Mathf.Max(-velAlongNormal - slop, 0) / (invAMass + invBMass) * percent * col.contacts[0].normal;
+            Vector3 correction = Mathf.Max(velAlongNormal - slop, 0) / (invAMass + invBMass) * percent * col.contacts[0].normal;
             A.position -= invAMass * correction; // started -
             B.position += invBMass * correction; // started +
             
@@ -142,7 +143,7 @@ public class CollisionHull3D : MonoBehaviour
         Vector3 range =  (boxHull.transform.position + boxHull.localCenter) - (sphere.transform.position + sphere.localCenter);        
         closestPoint = new Vector3(Mathf.Clamp(range.x, -boxHull.halfSize.x, boxHull.halfSize.x), Mathf.Clamp(range.y, -boxHull.halfSize.y, boxHull.halfSize.y), Mathf.Clamp(range.z, -boxHull.halfSize.z, boxHull.halfSize.z));
 
-        Vector3 closingVel = boxHull.GetComponent<Particle3D>().velocity - sphere.GetComponent<Particle3D>().velocity; // swapped
+        Vector3 closingVel = sphere.GetComponent<Particle3D>().velocity - boxHull.GetComponent<Particle3D>().velocity; // swapped
         Vector3 penetration = closestPoint - range; // swapped
         collision.closingVelocity = closingVel;
         collision.penetration = penetration;
@@ -155,20 +156,22 @@ public class CollisionHull3D : MonoBehaviour
         {
             Vector3 collisionNormal = new Vector3();
 
-            if (con0.point.x == boxHull.halfSize.x)//added mathf
-                collisionNormal = new Vector3(1.0f, 0.0f, 0.0f);
-            if (con0.point.x == -boxHull.halfSize.x)//added mathf
-                collisionNormal = new Vector3(-1.0f, 0.0f, 0.0f);
-            if (con0.point.y == boxHull.halfSize.y)
-                collisionNormal = new Vector3(0.0f, 1.0f, 0.0f);
-            if (con0.point.y == -boxHull.halfSize.y)
-                collisionNormal = new Vector3(0.0f, -1.0f, 0.0f);
-            if (con0.point.z == boxHull.halfSize.z)
-                collisionNormal = new Vector3(0.0f, 0.0f, 1.0f);
-            if (con0.point.z == -boxHull.halfSize.z)
-                collisionNormal = new Vector3(0.0f, 0.0f, -1.0f);
+            if (closestPoint.x == boxHull.halfSize.x)//added mathf
+                collisionNormal.x = 1.0f;
+            if (closestPoint.x == -boxHull.halfSize.x)//added mathf
+                collisionNormal.x = -1.0f;
+            if (closestPoint.y == boxHull.halfSize.y)
+                collisionNormal.y = 1.0f;
+            if (closestPoint.y == -boxHull.halfSize.y)
+                collisionNormal.y = -1.0f;
+            if (closestPoint.z == boxHull.halfSize.z)
+                collisionNormal.z = 1.0f;
+            if (closestPoint.z == -boxHull.halfSize.z)
+                collisionNormal.z = -1.0f;
 
-            con0.normal = collisionNormal;
+            collisionNormal.Normalize();
+
+            con0.normal = -collisionNormal;
 
             //Debug.Log(con0.normal);
 
@@ -252,9 +255,12 @@ public class CollisionHull3D : MonoBehaviour
             collisionNormal.z = -1.0f;
 
         collisionNormal.Normalize();
+
         Vector3 penetration = localRange - closestPoint;
         col.penetration = penetration;
         col.contacts[0].normal = (boxParticle.GetLocalToWorldtransform(false).MultiplyPoint(collisionNormal)).normalized;
+
+        //Debug.DrawLine(col.contacts[0].point, boxParticle.GetLocalToWorldtransform(false).MultiplyPoint(collisionNormal));
 
         col.contacts[0].restitution = Mathf.Min(obbHull.restitution, sphereHull.restitution);
         /*
@@ -267,7 +273,7 @@ public class CollisionHull3D : MonoBehaviour
             col.a = swapCol.b;
         }
         */
-        Debug.DrawLine(boxParticle.position, closestPoint);
+        //Debug.DrawLine(col.contacts[0].point, boxParticle.GetLocalToWorldtransform(false).MultiplyPoint(penetration) );
         if (penetration.magnitude <= sphereParticle.GetComponent<SphereHull>().radius)
         {
             col.status = true;
